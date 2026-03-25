@@ -1,7 +1,20 @@
 from app.services.storage.supabase_client import supabase
+from app.services.risk.monte_carlo import run_liquidity_monte_carlo
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
 
 router = APIRouter()
+
+
+class MonteCarloRequest(BaseModel):
+    user_id: str
+    inflow_variability: float = Field(
+        default=0.15, ge=0.0, le=1.0, description="Inflow CV (std/mean), e.g. 0.2 = 20%"
+    )
+    expense_variability: float = Field(
+        default=0.15, ge=0.0, le=1.0, description="Expense CV (std/mean)"
+    )
+    n_simulations: int = Field(default=8000, ge=2000, le=20000)
 
 # NOTE:
 # Your current Supabase SQL (`setup.sql`) defines `user_profiles`, but does not include
@@ -143,3 +156,48 @@ def top10(user_id: str = Query(...)):
         ]
     except Exception:
         return []
+
+
+def _monte_carlo_baselines(user_id: str) -> tuple[float, float, float]:
+    balance = _get_current_liquidity(user_id)
+    mean_inflow = balance * 0.4
+    mean_expense = balance * 0.3
+    try:
+        pay_res = (
+            supabase.table("obligations")
+            .select("amount")
+            .eq("type", "PAYABLE")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if pay_res.data:
+            mean_expense = float(sum(r["amount"] for r in pay_res.data))
+    except Exception:
+        pass
+    try:
+        rec_res = (
+            supabase.table("obligations")
+            .select("amount")
+            .eq("type", "RECEIVABLE")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if rec_res.data:
+            mean_inflow = float(sum(r["amount"] for r in rec_res.data))
+    except Exception:
+        pass
+    return balance, mean_inflow, mean_expense
+
+
+@router.post("/risk/monte-carlo")
+def monte_carlo_risk(req: MonteCarloRequest):
+    balance, mean_inflow, mean_expense = _monte_carlo_baselines(req.user_id)
+    result = run_liquidity_monte_carlo(
+        balance=balance,
+        mean_inflow=mean_inflow,
+        mean_expense=mean_expense,
+        inflow_variability=req.inflow_variability,
+        expense_variability=req.expense_variability,
+        n_simulations=req.n_simulations,
+    )
+    return result
