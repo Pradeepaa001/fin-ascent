@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     employees INTEGER,
     revenue_range TEXT,
     industry TEXT,
+    current_liquidity NUMERIC(15, 2),
     onboarding_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

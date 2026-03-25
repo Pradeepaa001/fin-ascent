@@ -68,7 +68,7 @@ export default function AuthPage() {
             .single()
 
           if (profile?.onboarding_completed && profile.business_type) {
-            router.push(`/dashboard/${profile.business_type}`)
+            router.push(`/dashboard`)
           } else {
             router.push('/onboarding')
           }

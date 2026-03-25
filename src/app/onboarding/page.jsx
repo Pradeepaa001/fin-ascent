@@ -19,6 +19,7 @@ export default function OnboardingPage() {
   const [employees, setEmployees] = useState('')
   const [revenue, setRevenue] = useState('')
   const [industry, setIndustry] = useState('')
+  const [liquidity, setLiquidity] = useState('')
   
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -52,12 +53,13 @@ export default function OnboardingPage() {
         employees: employees ? parseInt(employees) : null,
         revenue_range: revenue,
         industry: industry,
+        current_liquidity: liquidity ? parseFloat(liquidity) : null,
         onboarding_completed: true
       })
 
       if (error) throw error
 
-      router.push(`/dashboard/${businessType}`)
+      router.push(`/dashboard`)
     } catch (err) {
       setError(err.message || 'Failed to save profile. Make sure you pressed RUN on setup.sql in Supabase!')
     } finally {
@@ -72,7 +74,7 @@ export default function OnboardingPage() {
       <div className={`card ${styles.onboardingCard}`}>
         <div className={styles.header}>
           <h1 className={styles.title}>Tell us about your business</h1>
-          <p className={styles.subtitle}>We'll use this to personalize your FinAscend dashboard.</p>
+          <p className={styles.subtitle}>We&apos;ll use this to personalize your FinAscend dashboard.</p>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
@@ -107,15 +109,28 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Industry</label>
-            <input 
-              type="text" 
-              className="input-field" 
-              placeholder="e.g. Retail, SaaS, Logistics" 
-              value={industry}
-              onChange={(e) => setIndustry(e.target.value)}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Industry</label>
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="e.g. Retail, SaaS, Logistics" 
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+              />
+            </div>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Current Liquidity ($)</label>
+              <input 
+                type="number" 
+                className="input-field" 
+                placeholder="e.g. 50000" 
+                value={liquidity}
+                onChange={(e) => setLiquidity(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
