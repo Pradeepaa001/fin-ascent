@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FinAscend - Financial Decision Assistant
 
-## Getting Started
+This is the FinAscend frontend and core layer repository built with Next.js and PostgreSQL via Supabase.
 
-First, run the development server:
+## 👥 Team Setup Guide (For the 4-Person Dev Team)
 
+Since GitHub does not allow (and you should never) commit passwords or secrets, follow this exact workflow to get the project running on your local machine:
+
+### Step 1: Clone the Repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-github-repo-url>
+cd fin-ascent-app
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Step 2: Set up Environment Variables
+The repository comes with a `.env.example` file that shows **which** keys you need, but not the actual secret values.
+1. Create a **new file** in the root directory and name it exactly `.env.local`
+   *(Next.js automatically prevents `.env.local` from being uploaded to GitHub via `.gitignore`).*
+2. Copy the contents of `.env.example` into your new `.env.local` file.
+3. Replace the placeholder values with the real Supabase project URL and Anon keys. 
+   *(Ask the Project Owner to share these keys securely in your WhatsApp or Discord group. Do not post them in GitHub issues!)*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Step 3: Run the Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🔐 Database & Data Seeding
+Before working on the frontend dashboards, ensure your database has the minimum required mock data running.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Make sure Python is installed.
+2. Install the dependencies for the seeder:
+```bash
+pip install -q supabase python-dotenv faker
+```
+3. Run the data seeder:
+```bash
+python scripts/data.py
+```
+*(This script automatically reads the `.env.local` file you just created to connect safely!)*

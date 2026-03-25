@@ -1,0 +1,96 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--background);
+}
+
+.onboardingCard {
+  width: 100%;
+  max-width: 540px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 8px 0;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #3c4257;
+}
+
+.typeGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.typeCard {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  text-align: left;
+}
+
+.typeCard:hover {
+  border-color: rgba(99, 91, 255, 0.4);
+}
+
+.typeCard.selected {
+  border-color: var(--primary);
+  background: rgba(99, 91, 255, 0.04);
+}
+
+.typeContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.typeName {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.typeDesc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
