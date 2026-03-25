@@ -48,9 +48,10 @@ function defaultInPlainEnglish(pDefault, nSim) {
   return `Roughly ${approx} out of every 100 simulated futures (${n.toLocaleString()} total) ended with less than $0 cash after this period’s inflow and expenses.`
 }
 
+const DEFAULT_INFLOW_CV = 0.15
+const DEFAULT_EXPENSE_CV = 0.15
+
 export default function MonteCarloRisk({ userId }) {
-  const [inflowPct, setInflowPct] = useState(15)
-  const [expensePct, setExpensePct] = useState(15)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -67,8 +68,8 @@ export default function MonteCarloRisk({ userId }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: userId,
-            inflow_variability: inflowPct / 100,
-            expense_variability: expensePct / 100,
+            inflow_variability: DEFAULT_INFLOW_CV,
+            expense_variability: DEFAULT_EXPENSE_CV,
             n_simulations: 8000,
           }),
         }
@@ -91,7 +92,7 @@ export default function MonteCarloRisk({ userId }) {
     } finally {
       setLoading(false)
     }
-  }, [userId, inflowPct, expensePct])
+  }, [userId])
 
   useEffect(() => {
     if (!userId) return undefined
@@ -99,7 +100,7 @@ export default function MonteCarloRisk({ userId }) {
       run()
     }, 400)
     return () => clearTimeout(t)
-  }, [userId, inflowPct, expensePct, run])
+  }, [userId, run])
 
   if (!userId) {
     return null
@@ -143,14 +144,9 @@ export default function MonteCarloRisk({ userId }) {
         <summary style={styles.summary}>How to read this (simple)</summary>
         <ul style={styles.bullets}>
           <li>
-            <strong>Inflow variability</strong> — how much money coming in
-            might swing compared with today’s receivables baseline. Higher = more
-            uncertainty on the income side.
-          </li>
-          <li>
-            <strong>Expense variability</strong> — how much spending might swing
-            compared with today’s payables baseline. Higher = bills could land
-            higher or lower than expected.
+            <strong>Inflow / expense variability</strong> — the model uses a
+            fixed moderate “wobble” around your profile average inflows and
+            outflows (same scale as before the sliders were removed).
           </li>
           <li>
             <strong>Probability of default</strong> — here it means the share of
@@ -170,30 +166,12 @@ export default function MonteCarloRisk({ userId }) {
         </ul>
       </details>
 
-      <div style={styles.controls}>
-        <label style={styles.label}>
-          Inflow variability ({inflowPct}% CV)
-          <input
-            type="range"
-            min={0}
-            max={60}
-            value={inflowPct}
-            onChange={(e) => setInflowPct(Number(e.target.value))}
-            style={styles.range}
-          />
-        </label>
-        <label style={styles.label}>
-          Expense variability ({expensePct}% CV)
-          <input
-            type="range"
-            min={0}
-            max={60}
-            value={expensePct}
-            onChange={(e) => setExpensePct(Number(e.target.value))}
-            style={styles.range}
-          />
-        </label>
-      </div>
+      <p style={styles.fixedCv}>
+        Variability for this run is fixed at{' '}
+        <strong>{(DEFAULT_INFLOW_CV * 100).toFixed(0)}%</strong> inflow CV and{' '}
+        <strong>{(DEFAULT_EXPENSE_CV * 100).toFixed(0)}%</strong> expense CV,
+        based on your dashboard baselines.
+      </p>
 
       {error && (
         <div style={styles.errBox}>{error}</div>
@@ -339,22 +317,11 @@ const styles = {
     color: 'var(--foreground)',
     lineHeight: 1.5,
   },
-  controls: {
-    display: 'grid',
-    gap: 16,
-    marginTop: 20,
-  },
-  label: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
+  fixedCv: {
+    marginTop: 16,
     fontSize: 13,
-    fontWeight: 600,
-    color: 'var(--foreground)',
-  },
-  range: {
-    width: '100%',
-    accentColor: 'var(--primary)',
+    color: 'var(--text-muted)',
+    lineHeight: 1.45,
   },
   errBox: {
     marginTop: 12,

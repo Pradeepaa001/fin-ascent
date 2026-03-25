@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { formatCurrency } from './format'
+import { PRIORITY_RED_THRESHOLD } from '@/lib/priorityEngine'
 
 function parseDueTime(due) {
   const t = new Date(due).getTime()
@@ -7,7 +8,10 @@ function parseDueTime(due) {
 }
 
 function dotColor(item) {
-  if (item.color === 'red' || (item.priority != null && item.priority > 70)) {
+  if (
+    item.color === 'red' ||
+    (item.priority != null && item.priority >= PRIORITY_RED_THRESHOLD)
+  ) {
     return '#dc2626'
   }
   return '#16a34a'
@@ -93,7 +97,8 @@ export default function GanttTimeline({ data }) {
     <div className="card" style={styles.container}>
       <h3 style={styles.header}>Payables Timeline</h3>
       <p style={styles.subtitle}>
-        Each point is a payable; position = due date along the range. Hover a point for details. Red = high priority.
+        Each point is a payable; position = due date.         Weighted priority: 1.0×Urgency + 0.45×Penalty + 0.12×Relation (relation default
+        0.1, adjustable per row in the table). Red = higher priority.
       </p>
 
       <div style={styles.axisRow}>

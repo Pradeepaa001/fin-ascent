@@ -1,5 +1,6 @@
 from app.services.storage.supabase_client import supabase
 from app.services.risk.monte_carlo import run_liquidity_monte_carlo
+from datetime import date, datetime
 from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
@@ -16,51 +17,167 @@ class MonteCarloRequest(BaseModel):
     )
     n_simulations: int = Field(default=8000, ge=2000, le=20000)
 
-# NOTE:
-# Your current Supabase SQL (`setup.sql`) defines `user_profiles`, but does not include
-# the optional `credit` or `obligations` tables that these endpoints originally queried.
-# To keep the React dashboard visible, we gracefully fall back to heuristics based on
-# `user_profiles.current_liquidity` when those tables/columns are missing.
+def _parse_due_date(due) -> date | None:
+    if due is None:
+        return None
+    if isinstance(due, date) and not isinstance(due, datetime):
+        return due
+    if isinstance(due, datetime):
+        return due.date()
+    s = str(due)
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).date()
+    except ValueError:
+        try:
+            return datetime.strptime(s[:10], "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+
+def _urgency_from_due_date(due) -> float:
+    """Higher when due sooner or overdue (payables)."""
+    d = _parse_due_date(due)
+    if d is None:
+        return 0.0
+    today = date.today()
+    days = (d - today).days
+    if days < 0:
+        return 30.0 + float(abs(days))
+    return 30.0 / float(max(1, days + 1))
+
+
+DEFAULT_RELATION = 0.1
+# Urgency > penalty > relation (coefficients on raw terms)
+PRIORITY_WEIGHT_URGENCY = 1.0
+PRIORITY_WEIGHT_PENALTY = 0.45
+PRIORITY_WEIGHT_RELATION = 0.12
+
+
+def _load_user_profile_row(user_id: str) -> dict | None:
+    try:
+        res = (
+            supabase.table("user_profiles")
+            .select("*")
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+        return getattr(res, "data", None) or None
+    except Exception:
+        return None
+
+
+def _balance_from_profile(profile: dict | None) -> float:
+    if not profile:
+        return 0.0
+    liq = profile.get("current_liquidity")
+    bal = profile.get("current_balance")
+    if liq is not None:
+        return float(liq)
+    if bal is not None:
+        return float(bal)
+    return 0.0
+
 
 def _get_current_liquidity(user_id: str) -> float:
-    try:
-        res = (
-            supabase.table("user_profiles")
-            .select("current_balance")
-            .eq("user_id", user_id)
-            .single()
-            .execute()
-        )
-        if not getattr(res, "data", None):
-            return 0.0
-        return float(res.data.get("current_balance") or 0.0)
-    except Exception:
-        return 0.0
+    return _balance_from_profile(_load_user_profile_row(user_id))
 
-# 1️⃣ CREDIT SCORE
-@router.get("/credit-score")
-def get_credit_score(user_id: str = Query(...)):
-    # Preferred: if `credit` column exists
+
+def _totals_payables_receivables(user_id: str) -> tuple[float, float]:
+    pay = 0.0
+    rec = 0.0
     try:
-        res = (
-            supabase.table("user_profiles")
-            .select("credit_score")
+        pr = (
+            supabase.table("obligations")
+            .select("amount")
+            .eq("type", "PAYABLE")
             .eq("user_id", user_id)
-            .single()
             .execute()
         )
-        if res.data and res.data.get("credit_score") is not None:
-            return {"credit_score": res.data.get("credit_score", 0)}
-        else:
-            return {"credit_score": 0}
+        pay = float(sum(float(r["amount"]) for r in pr.data))
+    except Exception:
+        liq = _get_current_liquidity(user_id)
+        pay = float(liq * 0.3)
+
+    try:
+        rr = (
+            supabase.table("obligations")
+            .select("amount")
+            .eq("type", "RECEIVABLE")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        rec = float(sum(float(r["amount"]) for r in rr.data))
+    except Exception:
+        liq = _get_current_liquidity(user_id)
+        rec = float(liq * 0.4)
+    return pay, rec
+
+
+def _compute_credit_score_1_100(receivables: float, balance: float, payables: float) -> int:
+    """
+    Financial health: receivables + balance - payables, mapped to 1–100.
+    Uses a symmetric linear map around a scale derived from magnitudes.
+    """
+    raw = float(receivables) + float(balance) - float(payables)
+    scale = max(
+        abs(receivables),
+        abs(payables),
+        abs(balance),
+        abs(raw),
+        1.0,
+    )
+    t = (raw + scale) / (2.0 * scale)
+    t = max(0.0, min(1.0, t))
+    score = int(round(1.0 + t * 99.0))
+    return max(1, min(100, score))
+
+
+def _compute_priority_row(
+    due_date,
+    penalty_rate,
+    relation: float,
+) -> dict[str, float]:
+    urgency = _urgency_from_due_date(due_date)
+    penalty = float(penalty_rate or 0.0)
+    rel = float(relation)
+    priority = (
+        PRIORITY_WEIGHT_URGENCY * urgency
+        + PRIORITY_WEIGHT_PENALTY * penalty
+        + PRIORITY_WEIGHT_RELATION * rel
+    )
+    return {
+        "urgency": urgency,
+        "penalty": penalty,
+        "relation": rel,
+        "engine_priority": priority,
+    }
+
+
+def _persist_credit_score(user_id: str, score: int) -> None:
+    try:
+        supabase.table("user_profiles").update({"credit_score": score}).eq(
+            "user_id", user_id
+        ).execute()
     except Exception:
         pass
 
-    # Fallback: derive a stable-looking score from current liquidity
-    liquidity = _get_current_liquidity(user_id)
-    score = 50 + (liquidity / 5000.0) * 50.0
-    score = max(0, min(100, int(score)))
-    return {"credit_score": score}
+
+# 1️⃣ CREDIT SCORE (computed + stored)
+@router.get("/credit-score")
+def get_credit_score(user_id: str = Query(...)):
+    profile = _load_user_profile_row(user_id)
+    balance = _balance_from_profile(profile)
+    payables, receivables = _totals_payables_receivables(user_id)
+    score = _compute_credit_score_1_100(receivables, balance, payables)
+    _persist_credit_score(user_id, score)
+    return {
+        "credit_score": score,
+        "receivables": receivables,
+        "balance": balance,
+        "payables": payables,
+        "health_raw": receivables + balance - payables,
+    }
 
 # 2️⃣ TOTAL PAYABLES
 @router.get("/payables/summary")
@@ -109,27 +226,61 @@ def get_balance(user_id: str = Query(...)):
     return {"balance": liquidity}
 
 # 5️⃣ GANTT DATA (PAYABLES)
+def _fetch_payables_with_meta(user_id: str, *, limit: int | None = None):
+    """Return (rows list, spec used). Relation is not read from DB (client uses default 0.1 + overrides)."""
+    qspecs = [
+        "id, entity_name, amount, due_date, priority_score, penalty_rate",
+        "entity_name, amount, due_date, priority_score, penalty_rate",
+        "entity_name, amount, due_date, priority_score",
+    ]
+    last_exc: Exception | None = None
+    for spec in qspecs:
+        try:
+            q = (
+                supabase.table("obligations")
+                .select(spec)
+                .eq("type", "PAYABLE")
+                .eq("user_id", user_id)
+            )
+            if limit is not None:
+                q = q.order("due_date").limit(limit)
+            res = q.execute()
+            return res.data or [], spec
+        except Exception as e:
+            last_exc = e
+    if last_exc:
+        raise last_exc
+    return [], ""
+
+
 @router.get("/payables/timeline")
 def timeline(user_id: str = Query(...)):
     try:
-        res = (
-            supabase.table("obligations")
-            .select("entity_name, amount, due_date, priority_score")
-            .eq("type", "PAYABLE")
-            .eq("user_id", user_id)
-            .execute()
-        )
-
-        return [
-            {
-                "entity": r["entity_name"],
-                "amount": float(r["amount"]),
-                "due_date": r["due_date"],
-                "priority": r["priority_score"],
-                "color": "red" if r["priority_score"] > 70 else "green",
-            }
-            for r in res.data
-        ]
+        rows_raw, _spec = _fetch_payables_with_meta(user_id, limit=None)
+        rows = []
+        for r in rows_raw:
+            comp = _compute_priority_row(
+                r.get("due_date"),
+                r.get("penalty_rate"),
+                DEFAULT_RELATION,
+            )
+            eng = comp["engine_priority"]
+            oid = r.get("id")
+            rows.append(
+                {
+                    "obligation_id": str(oid) if oid is not None else None,
+                    "entity": r["entity_name"],
+                    "amount": float(r["amount"]),
+                    "due_date": r["due_date"],
+                    "priority": eng,
+                    "legacy_priority_score": r.get("priority_score"),
+                    "urgency": comp["urgency"],
+                    "penalty": comp["penalty"],
+                    "relation": DEFAULT_RELATION,
+                    "color": "red" if eng >= 22 else "green",
+                }
+            )
+        return rows
     except Exception:
         return []
 
@@ -137,31 +288,66 @@ def timeline(user_id: str = Query(...)):
 @router.get("/payables/top10")
 def top10(user_id: str = Query(...)):
     try:
-        res = (
-            supabase.table("obligations")
-            .select("due_date, entity_name, amount")
-            .eq("user_id", user_id)
-            .order("due_date")
-            .limit(10)
-            .execute()
-        )
-
-        return [
-            {
-                "due_date": r["due_date"],
-                "company": r["entity_name"],
-                "amount": float(r["amount"]),
-            }
-            for r in res.data
-        ]
+        rows_raw, _ = _fetch_payables_with_meta(user_id, limit=10)
+        out = []
+        for r in rows_raw:
+            comp = _compute_priority_row(
+                r.get("due_date"),
+                r.get("penalty_rate"),
+                DEFAULT_RELATION,
+            )
+            oid = r.get("id")
+            out.append(
+                {
+                    "obligation_id": str(oid) if oid is not None else None,
+                    "due_date": r["due_date"],
+                    "company": r["entity_name"],
+                    "amount": float(r["amount"]),
+                    "engine_priority": comp["engine_priority"],
+                    "urgency": comp["urgency"],
+                    "penalty": comp["penalty"],
+                    "relation": DEFAULT_RELATION,
+                }
+            )
+        return out
     except Exception:
         return []
 
 
+@router.get("/zero-day")
+def zero_day(user_id: str = Query(...)):
+    """
+    Runway (days of cover): balance / average_inflow from profile.
+    """
+    profile = _load_user_profile_row(user_id)
+    if not profile:
+        return {"zero_day": None, "detail": "no_profile"}
+    balance = _balance_from_profile(profile)
+    avg_in = float(profile.get("average_inflow") or 0.0)
+    if avg_in <= 0:
+        runway = None
+    else:
+        runway = float(balance) / avg_in
+    return {
+        "zero_day": runway,
+        "runway_days": runway,
+        "balance": balance,
+        "average_inflow": avg_in,
+    }
+
+
 def _monte_carlo_baselines(user_id: str) -> tuple[float, float, float]:
-    balance = _get_current_liquidity(user_id)
+    profile = _load_user_profile_row(user_id)
+    balance = _balance_from_profile(profile)
     mean_inflow = balance * 0.4
     mean_expense = balance * 0.3
+    if profile:
+        ai = profile.get("average_inflow")
+        ao = profile.get("average_outflow")
+        if ai is not None and float(ai) > 0:
+            mean_inflow = float(ai)
+        if ao is not None and float(ao) > 0:
+            mean_expense = float(ao)
     try:
         pay_res = (
             supabase.table("obligations")
@@ -170,7 +356,7 @@ def _monte_carlo_baselines(user_id: str) -> tuple[float, float, float]:
             .eq("user_id", user_id)
             .execute()
         )
-        if pay_res.data:
+        if pay_res.data and (not profile or profile.get("average_outflow") in (None, 0)):
             mean_expense = float(sum(r["amount"] for r in pay_res.data))
     except Exception:
         pass
@@ -182,7 +368,7 @@ def _monte_carlo_baselines(user_id: str) -> tuple[float, float, float]:
             .eq("user_id", user_id)
             .execute()
         )
-        if rec_res.data:
+        if rec_res.data and (not profile or profile.get("average_inflow") in (None, 0)):
             mean_inflow = float(sum(r["amount"] for r in rec_res.data))
     except Exception:
         pass

@@ -3,7 +3,7 @@ import SummaryCard from './SummaryCard'
 export default function SummaryRow({ data }) {
   return (
     <div style={styles.row}>
-      <SummaryCard title="Credit Score" value={data.credit_score} />
+      <SummaryCard title="Credit Score (1–100)" value={data.credit_score} variant="score" />
       <SummaryCard title="Payables" value={data.payables} />
       <SummaryCard title="Receivables" value={data.receivables} />
       <SummaryCard title="Balance" value={data.balance} />
