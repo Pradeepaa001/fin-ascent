@@ -1,0 +1,6 @@
+@echo off
+echo Installing Next.js dependencies (if any are missing)...
+call npm install
+echo Starting Next.js Frontend Server on port 3000...
+call npm run dev
+pause

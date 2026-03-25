@@ -31,7 +31,9 @@ export default async function DashboardLayout({
           <div style={{ background: 'var(--primary)', padding: 8, borderRadius: 8 }}>
             <Building2 color="white" size={20} />
           </div>
-          <strong style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em' }}>FinAscend</strong>
+          <NextLink href="/dashboard" style={{ color: 'inherit', textDecoration: 'none' }}>
+            <strong style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em' }}>FinAscend</strong>
+          </NextLink>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <NextLink href="/dashboard/chat" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--text-muted)', fontWeight: 500 }}>

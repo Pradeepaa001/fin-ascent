@@ -1,39 +1,35 @@
 .container {
   display: flex;
-  flex-direction: column;
-  height: calc(100vh - 150px);
+  justify-content: center;
+  height: calc(100vh - 120px);
   max-width: 900px;
   margin: 0 auto;
   padding: 1rem;
 }
 
-.header {
+.chatPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chatHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  padding: 1rem 1.5rem;
+  padding: 1.25rem 1.5rem;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.03);
 }
 
-.header h1 {
-  font-size: 1.5rem;
+.chatHeader h1 {
+  font-size: 1.4rem;
   margin: 0;
   color: #1a1a1a;
-}
-
-.toggleWrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.toggleLabel {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #495057;
+  font-weight: 700;
 }
 
 .chatWindow {
@@ -42,7 +38,7 @@
   flex-direction: column;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
   overflow: hidden;
 }
 
@@ -86,7 +82,7 @@
   font-size: 1rem;
   line-height: 1.5;
   border: 1px solid #dee2e6;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
 }
 
 .content {
@@ -96,7 +92,7 @@
 .debugSection {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px dashed #e9ecef;
 }
 
 .debugSection summary {
@@ -105,6 +101,7 @@
   font-weight: 600;
   color: #6c757d;
   margin-bottom: 0.5rem;
+  transition: color 0.2s;
 }
 
 .debugSection summary:hover {
@@ -131,17 +128,17 @@
 
 .inputForm input {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   font-size: 1rem;
   border: 1px solid #ced4da;
   border-radius: 24px;
   outline: none;
-  transition: 0.2s;
+  transition: all 0.2s;
 }
 
 .inputForm input:focus {
   border-color: #0d6efd;
-  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
 }
 
 .inputForm button {
@@ -152,7 +149,7 @@
   border-radius: 24px;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s;
 }
 
 .inputForm button:hover:not(:disabled) {
@@ -162,49 +159,4 @@
 .inputForm button:disabled {
   background: #6c757d;
   cursor: not-allowed;
-}
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 28px;
-}
-
-.switch input { 
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 34px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: #0d6efd;
-}
-
-input:checked + .slider:before {
-  transform: translateX(22px);
 }
