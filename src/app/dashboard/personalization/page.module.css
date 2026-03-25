@@ -1,0 +1,305 @@
+.container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 2rem;
+}
+
+.inputSection {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  font-weight: 600;
+  color: #6c757d;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tabs button.activeTab {
+  color: #0d6efd;
+  border-bottom: 3px solid #0d6efd;
+}
+
+.tabContent {
+  min-height: 250px;
+}
+
+.chatBox {
+  height: 150px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.botBubble {
+  background: #e9ecef;
+  padding: 0.5rem 1rem;
+  border-radius: 15px 15px 15px 0;
+  align-self: flex-start;
+  max-width: 80%;
+}
+
+.userBubble {
+  background: #0d6efd;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 15px 15px 0 15px;
+  align-self: flex-end;
+  max-width: 80%;
+}
+
+.chatOptions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chatOptions button {
+  flex: 1;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #0d6efd;
+  color: #0d6efd;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.chatOptions button:hover {
+  background: #0d6efd;
+  color: white;
+}
+
+.textMode textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  resize: vertical;
+}
+
+.actionBtn, .saveBtn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.actionBtn:hover, .saveBtn:hover {
+  background: #0b5ed7;
+}
+
+.actionBtn:disabled, .saveBtn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.formMode {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formMode label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.formMode input[type="range"] {
+  margin-top: 0.5rem;
+}
+
+.formMode input[type="text"] {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+}
+
+.summaryBox {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #e9ecef;
+  border-radius: 8px;
+}
+
+.summaryBox pre {
+  background: #343a40;
+  color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+
+.decisionSection {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid #e9ecef;
+}
+
+.toggleHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #198754;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.infoText {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.cardsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.decisionCard {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: 0.3s;
+}
+
+.highlightedCard {
+  border-left: 5px solid #198754;
+  box-shadow: 0 4px 8px rgba(25, 135, 84, 0.1);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.cardHeader h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.scoreBadge {
+  background: #ffc107;
+  color: #000;
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.amount {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.reasoning {
+  font-size: 0.9rem;
+  color: #495057;
+  margin: 0;
+}
+
+.comparisonNote {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #ccc;
+  font-size: 0.85rem;
+  color: #198754;
+  font-weight: 600;
+}

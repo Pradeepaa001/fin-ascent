@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     revenue_range TEXT,
     industry TEXT,
     current_liquidity NUMERIC(15, 2),
+    penalty_weight NUMERIC(3, 2) DEFAULT 1.0,
+    relationship_weight NUMERIC(3, 2) DEFAULT 1.0,
+    flexibility_weight NUMERIC(3, 2) DEFAULT 1.0,
+    priority_entities JSONB DEFAULT '[]'::jsonb,
     onboarding_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
