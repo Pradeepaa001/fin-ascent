@@ -15,7 +15,16 @@ def clean_json(response_text):
         return {"error": "Invalid JSON", "raw": response_text}
 
 
-def extract_receipt_data(image_bytes):
+def _normalize_image_mime(mime_type):
+    if not mime_type or mime_type == "application/octet-stream":
+        return "image/jpeg"
+    if mime_type.startswith("image/"):
+        return mime_type
+    return "image/jpeg"
+
+
+def extract_receipt_data(image_bytes, mime_type="image/jpeg"):
+    mime = _normalize_image_mime(mime_type)
 
     prompt = """
     You are an OCR system.
@@ -41,9 +50,27 @@ def extract_receipt_data(image_bytes):
     ONLY return valid JSON. No explanation.
     """
 
-    response = model.generate_content([
-        prompt,
-        {"mime_type": "image/jpeg", "data": image_bytes},
-    ])
+    try:
+        response = model.generate_content(
+            [
+                prompt,
+                {"mime_type": mime, "data": image_bytes},
+            ]
+        )
+    except Exception as e:
+        return {
+            "error": "Gemini request failed",
+            "detail": str(e),
+        }
 
-    return clean_json(getattr(response, "text", "") or "")
+    try:
+        raw_text = response.text or ""
+    except Exception as e:
+        feedback = getattr(response, "prompt_feedback", None)
+        return {
+            "error": "No OCR text returned (blocked or empty response)",
+            "detail": str(e),
+            "prompt_feedback": str(feedback) if feedback is not None else None,
+        }
+
+    return clean_json(raw_text)

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Building2, LogOut, Settings, MessageCircle } from 'lucide-react'
+import NextLink from 'next/link'
 
 export default async function DashboardLayout({
   children,
@@ -31,18 +31,21 @@ export default async function DashboardLayout({
           <div style={{ background: 'var(--primary)', padding: 8, borderRadius: 8 }}>
             <Building2 color="white" size={20} />
           </div>
-          <Link href="/dashboard" style={{ color: 'inherit', textDecoration: 'none' }}>
+          <NextLink href="/dashboard" style={{ color: 'inherit', textDecoration: 'none' }}>
             <strong style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em' }}>FinAscend</strong>
-          </Link>
+          </NextLink>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Link href="/dashboard/chat" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--text-muted)', fontWeight: 500 }}>
+          <NextLink href="/dashboard/chat" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--text-muted)', fontWeight: 500 }}>
             <MessageCircle size={16} /> Assistant
-          </Link>
+          </NextLink>
+          <NextLink href="/dashboard/personalization" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--text-muted)', fontWeight: 500 }}>
+            <Settings size={16} /> Personalization
+          </NextLink>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
             {profile.name} <span style={{opacity: 0.5}}>|</span> <span style={{textTransform: 'capitalize'}}>{profile.business_type}</span>
           </span>
-          <Link
+          <NextLink
             href="/ocr"
             style={{
               color: 'var(--text-muted)',
@@ -55,7 +58,7 @@ export default async function DashboardLayout({
             }}
           >
             OCR
-          </Link>
+          </NextLink>
           <form action="/auth/signout" method="post">
             <button type="submit" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
               <LogOut size={16} /> Exit

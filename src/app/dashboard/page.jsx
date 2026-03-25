@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import SummaryRow from '@/components/dashboard/SummaryRow'
 import GanttTimeline from '@/components/dashboard/GanttTimeline'
 import PayablesTable from '@/components/dashboard/PayablesTable'
+import MonteCarloRisk from '@/components/dashboard/MonteCarloRisk'
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
@@ -15,6 +16,7 @@ export default function DashboardRoot() {
   const supabase = useMemo(() => createClient(), [])
 
   const [profile, setProfile] = useState(null)
+  const [userId, setUserId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -55,6 +57,7 @@ export default function DashboardRoot() {
 
         if (!mounted) return
         setProfile(p)
+        setUserId(user.id)
 
         const apiBase = `${API_BASE_URL}/api/dashboard`
 
@@ -152,6 +155,7 @@ export default function DashboardRoot() {
           <SummaryRow data={summary} />
           <GanttTimeline data={timeline} />
           <PayablesTable data={table} />
+          <MonteCarloRisk userId={userId} />
         </>
       )}
     </div>
