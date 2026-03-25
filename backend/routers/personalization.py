@@ -16,7 +16,7 @@ supabase_key = os.environ.get("SUPABASE_ANON_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
+model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
 
 class ParseRequest(BaseModel):
     text: str

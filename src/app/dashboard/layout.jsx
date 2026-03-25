@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Building2, LogOut, Settings, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
