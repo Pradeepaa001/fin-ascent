@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Building2, LogOut, Settings, MessageCircle } from 'lucide-react'
-import Link from 'next/link'
 
 export default async function DashboardLayout({
   children,
@@ -32,14 +31,13 @@ export default async function DashboardLayout({
           <div style={{ background: 'var(--primary)', padding: 8, borderRadius: 8 }}>
             <Building2 color="white" size={20} />
           </div>
-          <strong style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em' }}>FinAscend</strong>
+          <Link href="/dashboard" style={{ color: 'inherit', textDecoration: 'none' }}>
+            <strong style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em' }}>FinAscend</strong>
+          </Link>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link href="/dashboard/chat" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--text-muted)', fontWeight: 500 }}>
             <MessageCircle size={16} /> Assistant
-          </Link>
-          <Link href="/dashboard/personalization" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--text-muted)', fontWeight: 500 }}>
-            <Settings size={16} /> Personalization
           </Link>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
             {profile.name} <span style={{opacity: 0.5}}>|</span> <span style={{textTransform: 'capitalize'}}>{profile.business_type}</span>
