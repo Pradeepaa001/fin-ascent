@@ -67,6 +67,9 @@ def _load_user_profile_row(user_id: str) -> dict | None:
         return None
 
 
+DEFAULT_AVG_CASH_INFLOW = 50000.0
+
+
 def _balance_from_profile(profile: dict | None) -> float:
     if not profile:
         return 0.0
@@ -77,6 +80,32 @@ def _balance_from_profile(profile: dict | None) -> float:
     if bal is not None:
         return float(bal)
     return 0.0
+
+
+def _current_balance_for_runway(profile: dict | None) -> float:
+    """Runway numerator: current_balance first, else current_liquidity."""
+    if not profile:
+        return 0.0
+    cb = profile.get("current_balance")
+    if cb is not None:
+        return float(cb)
+    liq = profile.get("current_liquidity")
+    if liq is not None:
+        return float(liq)
+    return 0.0
+
+
+def _avg_cash_inflow_for_runway(profile: dict | None) -> float:
+    """Runway denominator: avg_cash_inflow, else average_inflow; if missing or ≤0, default."""
+    if not profile:
+        return DEFAULT_AVG_CASH_INFLOW
+    for key in ("avg_cash_inflow", "average_inflow"):
+        v = profile.get(key)
+        if v is not None:
+            fv = float(v)
+            if fv > 0:
+                return fv
+    return DEFAULT_AVG_CASH_INFLOW
 
 
 def _get_current_liquidity(user_id: str) -> float:
@@ -119,7 +148,7 @@ def _compute_credit_score_1_100(receivables: float, balance: float, payables: fl
     Financial health: receivables + balance - payables, mapped to 1–100.
     Uses a symmetric linear map around a scale derived from magnitudes.
     """
-    raw = float(receivables) + float(balance) - float(payables)
+    raw = ((float(receivables) + float(balance) - float(payables))/ (abs(receivables) + abs(payables) + abs(balance))) * 100
     scale = max(
         abs(receivables),
         abs(payables),
@@ -130,7 +159,7 @@ def _compute_credit_score_1_100(receivables: float, balance: float, payables: fl
     t = (raw + scale) / (2.0 * scale)
     t = max(0.0, min(1.0, t))
     score = int(round(1.0 + t * 99.0))
-    return max(1, min(100, score))
+    return int(round(raw))
 
 
 def _compute_priority_row(
@@ -171,12 +200,13 @@ def get_credit_score(user_id: str = Query(...)):
     payables, receivables = _totals_payables_receivables(user_id)
     score = _compute_credit_score_1_100(receivables, balance, payables)
     _persist_credit_score(user_id, score)
+    health_raw = receivables + balance - payables
     return {
         "credit_score": score,
         "receivables": receivables,
         "balance": balance,
         "payables": payables,
-        "health_raw": receivables + balance - payables,
+        "health_raw": health_raw,
     }
 
 # 2️⃣ TOTAL PAYABLES
@@ -317,20 +347,20 @@ def top10(user_id: str = Query(...)):
 @router.get("/zero-day")
 def zero_day(user_id: str = Query(...)):
     """
-    Runway (days of cover): balance / average_inflow from profile.
+    Runway (days of cover): current_balance / avg_cash_inflow.
+    If inflow is missing or non-positive, avg_cash_inflow defaults to 50,000.
     """
     profile = _load_user_profile_row(user_id)
     if not profile:
         return {"zero_day": None, "detail": "no_profile"}
-    balance = _balance_from_profile(profile)
-    avg_in = float(profile.get("average_inflow") or 0.0)
-    if avg_in <= 0:
-        runway = None
-    else:
-        runway = float(balance) / avg_in
+    balance = _current_balance_for_runway(profile)
+    avg_in = _avg_cash_inflow_for_runway(profile)
+    runway = float(balance) / avg_in
     return {
         "zero_day": runway,
         "runway_days": runway,
+        "current_balance": balance,
+        "avg_cash_inflow": avg_in,
         "balance": balance,
         "average_inflow": avg_in,
     }

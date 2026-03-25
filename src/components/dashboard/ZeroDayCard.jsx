@@ -5,7 +5,7 @@ export default function ZeroDayCard({ runwayDays, balance, averageInflow }) {
     typeof runwayDays === 'number' && Number.isFinite(runwayDays) ? runwayDays : null
 
   let tone = 'var(--text-muted)'
-  let label = 'Runway (balance ÷ avg inflow)'
+  let label = 'Runway (current balance ÷ avg cash inflow)'
   if (n != null) {
     if (n < 7) {
       tone = '#b91c1c'
@@ -28,15 +28,13 @@ export default function ZeroDayCard({ runwayDays, balance, averageInflow }) {
         {n != null ? `${n.toFixed(1)} days` : '—'}
       </p>
       <p style={{ margin: '10px 0 0 0', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>
-        Balance ÷ average cash inflow (from your profile).{' '}
+        Current balance ÷ avg cash inflow (missing inflow defaults to $50,000).{' '}
         {balance != null && averageInflow != null && (
           <>
             {' '}
             (
             <strong>{formatMoney(balance)}</strong> ÷{' '}
             <strong>{formatMoney(averageInflow)}</strong>
-            {Number(averageInflow) <= 0 &&
-              ' — add a positive average inflow in onboarding to compute runway.'}
             ).
           </>
         )}

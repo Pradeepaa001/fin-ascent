@@ -2,18 +2,12 @@ import os
 import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from supabase import create_client, Client
-from dotenv import load_dotenv
 import google.generativeai as genai
 from typing import List
 
-load_dotenv()
+from app.services.storage.supabase_client import supabase
 
 router = APIRouter()
-
-supabase_url = os.environ.get("SUPABASE_URL")
-supabase_key = os.environ.get("SUPABASE_ANON_KEY")
-supabase: Client = create_client(supabase_url, supabase_key)
 
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})

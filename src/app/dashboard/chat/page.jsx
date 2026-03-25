@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import styles from "./page.module.css";
 import { createClient } from "@supabase/supabase-js";
+import { backendUrl } from "@/lib/apiBase";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -39,7 +40,7 @@ export default function UnifiedAssistantPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/chat/query", {
+      const res = await fetch(backendUrl("/api/chat/query"), {
          method: "POST",
          headers: { "Content-Type": "application/json" },
          body: JSON.stringify({

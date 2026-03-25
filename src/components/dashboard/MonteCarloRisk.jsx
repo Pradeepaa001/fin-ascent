@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { formatCurrency } from './format'
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+import { fetchWithTimeout, getDashboardApiBase } from '@/lib/apiBase'
 
 function pct(n) {
   return `${(n * 100).toFixed(1)}%`
@@ -61,8 +59,8 @@ export default function MonteCarloRisk({ userId }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/dashboard/risk/monte-carlo`,
+      const res = await fetchWithTimeout(
+        `${getDashboardApiBase()}/risk/monte-carlo`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

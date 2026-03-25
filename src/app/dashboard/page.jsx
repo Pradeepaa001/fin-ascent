@@ -14,9 +14,7 @@ import {
   loadRelationOverrides,
   saveRelationOverrides,
 } from '@/lib/priorityEngine'
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+import { fetchWithTimeout, getDashboardApiBase } from '@/lib/apiBase'
 
 export default function DashboardRoot() {
   const router = useRouter()
@@ -70,7 +68,7 @@ export default function DashboardRoot() {
       setProfile(p)
       setUserId(user.id)
 
-      const apiBase = `${API_BASE_URL}/api/dashboard`
+      const apiBase = getDashboardApiBase()
 
       const [
         creditRes,
@@ -81,13 +79,13 @@ export default function DashboardRoot() {
         top10Res,
         zeroRes,
       ] = await Promise.all([
-        fetch(`${apiBase}/credit-score?user_id=${user.id}`),
-        fetch(`${apiBase}/payables/summary?user_id=${user.id}`),
-        fetch(`${apiBase}/receivables/summary?user_id=${user.id}`),
-        fetch(`${apiBase}/balance?user_id=${user.id}`),
-        fetch(`${apiBase}/payables/timeline?user_id=${user.id}`),
-        fetch(`${apiBase}/payables/top10?user_id=${user.id}`),
-        fetch(`${apiBase}/zero-day?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/credit-score?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/payables/summary?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/receivables/summary?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/balance?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/payables/timeline?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/payables/top10?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/zero-day?user_id=${user.id}`),
       ])
 
       const [
@@ -123,12 +121,18 @@ export default function DashboardRoot() {
           : null
       )
       setRunwayBalance(
-        zeroPayload?.balance != null ? Number(zeroPayload.balance) : null
+        zeroPayload?.current_balance != null
+          ? Number(zeroPayload.current_balance)
+          : zeroPayload?.balance != null
+            ? Number(zeroPayload.balance)
+            : null
       )
       setRunwayInflow(
-        zeroPayload?.average_inflow != null
-          ? Number(zeroPayload.average_inflow)
-          : null
+        zeroPayload?.avg_cash_inflow != null
+          ? Number(zeroPayload.avg_cash_inflow)
+          : zeroPayload?.average_inflow != null
+            ? Number(zeroPayload.average_inflow)
+            : null
       )
 
       const { data: refreshed } = await supabase
@@ -140,7 +144,16 @@ export default function DashboardRoot() {
         setProfile(refreshed)
       }
     } catch (e) {
-      setError(e?.message || 'Failed to load dashboard.')
+      if (e?.name === 'AbortError') {
+        setError(
+          'Dashboard API timed out (30s). Start FastAPI: cd backend && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000'
+        )
+      } else {
+        setError(
+          e?.message ||
+            'Failed to load dashboard. Start the API on port 8000, or unset NEXT_PUBLIC_API_BASE_URL so Next proxies /api/dashboard to the backend.'
+        )
+      }
     } finally {
       setLoading(false)
     }

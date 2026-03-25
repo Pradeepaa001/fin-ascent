@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     revenue_range TEXT,
     industry TEXT,
     current_liquidity NUMERIC(15, 2),
+    current_balance NUMERIC(15, 2),
+    avg_cash_inflow NUMERIC(15, 2),
     average_inflow NUMERIC(15, 2),
     average_outflow NUMERIC(15, 2),
     credit_score INTEGER,
