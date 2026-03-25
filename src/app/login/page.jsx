@@ -12,13 +12,13 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   
   const router = useRouter()
   const supabase = createClient()
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -74,7 +74,7 @@ export default function AuthPage() {
           }
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'An unexpected error occurred')
     } finally {
       setLoading(false)

@@ -13,14 +13,14 @@ const BUSINESS_TYPES = [
 ]
 
 export default function OnboardingPage() {
-  const [userId, setUserId] = useState<string | null>(null)
+  const [userId, setUserId] = useState(null)
   const [name, setName] = useState('')
   const [businessType, setBusinessType] = useState('small')
   const [employees, setEmployees] = useState('')
   const [revenue, setRevenue] = useState('')
   const [industry, setIndustry] = useState('')
   
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   
   const router = useRouter()
@@ -37,7 +37,7 @@ export default function OnboardingPage() {
     })
   }, [router, supabase])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!userId) return
 
@@ -58,7 +58,7 @@ export default function OnboardingPage() {
       if (error) throw error
 
       router.push(`/dashboard/${businessType}`)
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Failed to save profile. Make sure you pressed RUN on setup.sql in Supabase!')
     } finally {
       setLoading(false)

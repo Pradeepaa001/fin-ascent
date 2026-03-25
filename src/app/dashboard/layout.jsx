@@ -4,8 +4,6 @@ import { Building2, LogOut } from 'lucide-react'
 
 export default async function DashboardLayout({
   children,
-}: {
-  children: React.ReactNode
 }) {
   const supabase = await createClient()
 
