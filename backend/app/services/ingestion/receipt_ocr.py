@@ -3,10 +3,16 @@ import json
 import re
 
 def clean_json(response_text):
-    match = re.search(r"\{.*\}", response_text, re.DOTALL)
-    if match:
+    # Extract the first {...} block and parse it as JSON.
+    # The OCR model sometimes wraps JSON in extra text/formatting.
+    match = re.search(r"\{[\s\S]*?\}", response_text or "", re.DOTALL)
+    if not match:
+        return {"error": "Invalid JSON", "raw": response_text}
+
+    try:
         return json.loads(match.group())
-    return {"error": "Invalid JSON"}
+    except json.JSONDecodeError:
+        return {"error": "Invalid JSON", "raw": response_text}
 
 
 def extract_receipt_data(image_bytes):
@@ -37,7 +43,7 @@ def extract_receipt_data(image_bytes):
 
     response = model.generate_content([
         prompt,
-        {"mime_type": "image/jpeg", "data": image_bytes}
+        {"mime_type": "image/jpeg", "data": image_bytes},
     ])
 
-    return clean_json(response.text)
+    return clean_json(getattr(response, "text", "") or "")

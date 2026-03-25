@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Building2, LogOut } from 'lucide-react'
 
@@ -36,6 +37,20 @@ export default async function DashboardLayout({
           <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>
             {profile.name} <span style={{opacity: 0.5}}>|</span> <span style={{textTransform: 'capitalize'}}>{profile.business_type}</span>
           </span>
+          <Link
+            href="/ocr"
+            style={{
+              color: 'var(--text-muted)',
+              fontWeight: 600,
+              textDecoration: 'none',
+              padding: '8px 10px',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: 'white',
+            }}
+          >
+            OCR
+          </Link>
           <form action="/auth/signout" method="post">
             <button type="submit" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
               <LogOut size={16} /> Exit

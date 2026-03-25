@@ -1,71 +1,159 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet } from 'lucide-react'
+'use client'
 
-export default async function DashboardRoot() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import SummaryRow from '@/components/dashboard/SummaryRow'
+import GanttTimeline from '@/components/dashboard/GanttTimeline'
+import PayablesTable from '@/components/dashboard/PayablesTable'
 
-  if (!user) redirect('/login')
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
 
-  const { data: profile } = await supabase.from('user_profiles').select('*').eq('user_id', user.id).single()
+export default function DashboardRoot() {
+  const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
 
-  if (!profile) {
-    redirect('/onboarding')
-  }
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Format the liquidity for display
-  const liquidityValue = profile?.current_balance || 0;
-  const liquidityFormat = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(liquidityValue)
+  const [summary, setSummary] = useState({})
+  const [timeline, setTimeline] = useState([])
+  const [table, setTable] = useState([])
 
-  // Use base liquidity to generate some relative mock data so it looks realistic and dynamic
-  const cashFlow = liquidityValue * 0.8;
-  const receivables = liquidityValue * 0.4;
-  const payables = liquidityValue * 0.3;
+  useEffect(() => {
+    let mounted = true
 
-  const currencyFormat = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+    async function fetchData() {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser()
+
+        if (userError) throw userError
+        if (!user) {
+          router.push('/login')
+          return
+        }
+
+        const { data: p, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profileError) throw profileError
+        if (!p || !p.onboarding_completed) {
+          router.push('/onboarding')
+          return
+        }
+
+        if (!mounted) return
+        setProfile(p)
+
+        const apiBase = `${API_BASE_URL}/api/dashboard`
+
+        const [creditRes, payablesRes, receivablesRes, balanceRes, ganttRes, top10Res] =
+          await Promise.all([
+            fetch(`${apiBase}/credit-score?user_id=${user.id}`),
+            fetch(`${apiBase}/payables/summary?user_id=${user.id}`),
+            fetch(`${apiBase}/receivables/summary?user_id=${user.id}`),
+            fetch(`${apiBase}/balance?user_id=${user.id}`),
+            fetch(`${apiBase}/payables/timeline?user_id=${user.id}`),
+            fetch(`${apiBase}/payables/top10?user_id=${user.id}`),
+          ])
+
+        const [credit, payables, receivables, balance, gantt, top10] =
+          await Promise.all([
+            creditRes.json(),
+            payablesRes.json(),
+            receivablesRes.json(),
+            balanceRes.json(),
+            ganttRes.json(),
+            top10Res.json(),
+          ])
+
+        if (!mounted) return
+
+        setSummary({
+          credit_score: credit?.credit_score ?? 0,
+          payables: payables?.total_amount ?? 0,
+          receivables: receivables?.total_amount ?? 0,
+          balance: balance?.balance ?? 0,
+        })
+
+        setTimeline(Array.isArray(gantt) ? gantt : [])
+        setTable(Array.isArray(top10) ? top10 : [])
+      } catch (e) {
+        if (!mounted) return
+        setError(e?.message || 'Failed to load dashboard.')
+      } finally {
+        if (!mounted) return
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+    return () => {
+      mounted = false
+    }
+  }, [router, supabase])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
-        <h1 style={{ fontSize: '2rem', marginBottom: 8 }}>Welcome, {profile?.name}</h1>
-        <p style={{ color: 'var(--primary)', fontWeight: 600, background: 'rgba(99,91,255,0.1)', display: 'inline-block', padding: '4px 12px', borderRadius: 16, margin: 0 }}>
-          <span style={{ textTransform: 'capitalize' }}>{profile?.business_type || 'Business'}</span> Dashboard
+        <h1 style={{ fontSize: '2rem', marginBottom: 8 }}>
+          Welcome{profile?.name ? `, ${profile.name}` : ''}
+        </h1>
+        <p
+          style={{
+            color: 'var(--primary)',
+            fontWeight: 700,
+            background: 'rgba(99,91,255,0.1)',
+            display: 'inline-block',
+            padding: '6px 12px',
+            borderRadius: 16,
+            margin: 0,
+          }}
+        >
+          <span style={{ textTransform: 'capitalize' }}>
+            {profile?.business_type || 'Business'}
+          </span>{' '}
+          Dashboard
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
-        {/* New Current Liquidity Card */}
-        <div className="card" style={{ padding: 24, border: '2px solid var(--primary)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '1rem', fontWeight: 700 }}>Current Liquidity</h3>
-            <Wallet size={20} color="var(--primary)" />
-          </div>
-          <p style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, color: 'var(--foreground)' }}>{liquidityFormat}</p>
+      {error && (
+        <div
+          style={{
+            background: '#fee3e2',
+            border: '1px solid #fecdd2',
+            color: '#b91c1c',
+            padding: 12,
+            borderRadius: 10,
+            fontWeight: 600,
+          }}
+        >
+          {error}
         </div>
+      )}
 
-        <div className="card" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 600 }}>Cash Flow</h3>
-            <DollarSign size={20} color="var(--primary)" />
-          </div>
-          <p style={{ fontSize: '2rem', fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>{currencyFormat(cashFlow)}</p>
+      {loading ? (
+        <div className="card" style={{ padding: 20 }}>
+          Loading dashboard…
         </div>
-        <div className="card" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 600 }}>Receivables</h3>
-            <ArrowUpRight size={20} color="var(--accent)" />
-          </div>
-          <p style={{ fontSize: '2rem', fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>{currencyFormat(receivables)}</p>
-        </div>
-        <div className="card" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 600 }}>Payables</h3>
-            <ArrowDownRight size={20} color="#ef4444" />
-          </div>
-          <p style={{ fontSize: '2rem', fontWeight: 700, margin: 0, color: 'var(--foreground)' }}>{currencyFormat(payables)}</p>
-        </div>
-      </div>
+      ) : (
+        <>
+          <SummaryRow data={summary} />
+          <GanttTimeline data={timeline} />
+          <PayablesTable data={table} />
+        </>
+      )}
     </div>
   )
 }

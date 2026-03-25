@@ -48,3 +48,4 @@ backend/app/api/__pycache__/
 backend/app/services/ingestion/__pycache__/
 backend/app/services/llm/__pycache__/
 backend/app/services/storage/__pycache__/
+backend/.fin-ascent/
