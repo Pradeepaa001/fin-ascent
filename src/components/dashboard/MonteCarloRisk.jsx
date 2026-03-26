@@ -209,6 +209,75 @@ export default function MonteCarloRisk({ userId }) {
         <>
           <VerdictPanel />
 
+          {data.receivables_loss_plain_summary && (
+            <div style={styles.insightBanner}>
+              <div style={styles.insightBannerTitle}>Receivable conversion (model)</div>
+              <p style={styles.insightBannerText}>
+                {data.receivables_loss_plain_summary}
+              </p>
+            </div>
+          )}
+
+          {data.narrative?.insights?.length > 0 && (
+            <div style={styles.insightsSection}>
+              <div style={styles.sectionTitle}>Insights &amp; recommended actions</div>
+              <p style={styles.sectionSub}>
+                Generated deterministically from your simulation counts (same numbers → same
+                text). Not AI-generated prose.
+              </p>
+              {data.narrative.insights.map((ins) => (
+                <div key={ins.id} style={styles.insightCard}>
+                  <p style={styles.insightHeadline}>{ins.headline}</p>
+                  <div style={styles.actionBox}>
+                    <span style={styles.actionLabel}>Suggested action</span>
+                    <p style={styles.actionText}>{ins.action}</p>
+                  </div>
+                  <details style={styles.cotDetails}>
+                    <summary style={styles.cotSummary}>Chain of thought (deterministic)</summary>
+                    <ol style={styles.cotList}>
+                      {ins.chain_of_thought?.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ol>
+                  </details>
+                  <div style={styles.devilInline}>
+                    <strong style={styles.devilTitle}>Devil&apos;s advocate</strong>
+                    <p style={styles.devilText}>{ins.devils_advocate}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {data.narrative?.primary_actions?.length > 0 && (
+            <div style={styles.generalActions}>
+              <div style={styles.sectionTitle}>Actions to take (ordered)</div>
+              <ol style={styles.actionOl}>
+                {data.narrative.primary_actions.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {data.narrative?.master_chain_of_thought?.length > 0 && (
+            <details style={styles.masterCot}>
+              <summary style={styles.summary}>Overall model reasoning (CoT)</summary>
+              <ol style={styles.cotList}>
+                {data.narrative.master_chain_of_thought.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
+            </details>
+          )}
+
+          {data.narrative?.devils_advocate_overall && (
+            <div style={styles.devilOverall}>
+              <strong style={styles.devilTitle}>Devil&apos;s advocate — full counterweight</strong>
+              <p style={styles.devilText}>{data.narrative.devils_advocate_overall}</p>
+            </div>
+          )}
+
           <div style={styles.metrics}>
             <div style={styles.metric}>
               <span style={styles.metricLabel}>Probability of default</span>
@@ -219,6 +288,14 @@ export default function MonteCarloRisk({ userId }) {
                 Technical: share of paths where ending cash &lt; 0 (balance +
                 shocked inflow − shocked expenses).
               </span>
+              {data.probability_receivables_heavy_loss != null && (
+                <span style={styles.metricHint}>
+                  Heavy receivable stress (inflow ≤30% of baseline):{' '}
+                  {pct(data.probability_receivables_heavy_loss)} · material (≤50%):{' '}
+                  {pct(data.probability_receivables_material_shortfall ?? 0)} · expense
+                  spike (≥120% baseline): {pct(data.probability_expense_spike ?? 0)}
+                </span>
+              )}
             </div>
             <div style={styles.metric}>
               <span style={styles.metricLabel}>Best-case cash inflow</span>
@@ -274,8 +351,15 @@ export default function MonteCarloRisk({ userId }) {
                 ))}
               </div>
               <div style={styles.vizAxis}>
-                <span>Lower outcomes ←</span>
-                <span>→ Higher outcomes</span>
+                <span>
+                  ← {formatCurrency(data.distribution[0]?.start ?? 0)} (tighter cash)
+                </span>
+                <span>
+                  {formatCurrency(
+                    data.distribution[data.distribution.length - 1]?.end ?? 0
+                  )}{' '}
+                  (more cushion) →
+                </span>
               </div>
             </div>
           )}
@@ -443,5 +527,138 @@ const styles = {
     marginTop: 8,
     fontSize: 11,
     color: 'var(--text-muted)',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  insightBanner: {
+    marginTop: 18,
+    padding: 14,
+    borderRadius: 12,
+    border: '1px solid var(--border)',
+    background: 'rgba(99, 91, 255, 0.08)',
+  },
+  insightBannerTitle: {
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: 'var(--primary)',
+  },
+  insightBannerText: {
+    margin: '8px 0 0 0',
+    fontSize: 14,
+    color: 'var(--foreground)',
+    lineHeight: 1.5,
+  },
+  insightsSection: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: 800,
+    color: 'var(--foreground)',
+  },
+  sectionSub: {
+    margin: '6px 0 12px 0',
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    lineHeight: 1.4,
+  },
+  insightCard: {
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    background: 'var(--surface)',
+  },
+  insightHeadline: {
+    margin: 0,
+    fontSize: 14,
+    fontWeight: 700,
+    color: 'var(--foreground)',
+    lineHeight: 1.45,
+  },
+  actionBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    background: 'rgba(34, 197, 94, 0.08)',
+    border: '1px solid rgba(34,197,94,0.25)',
+  },
+  actionLabel: {
+    fontSize: 11,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: '#166534',
+  },
+  actionText: {
+    margin: '6px 0 0 0',
+    fontSize: 13,
+    color: 'var(--foreground)',
+    lineHeight: 1.45,
+  },
+  cotDetails: {
+    marginTop: 12,
+    fontSize: 13,
+  },
+  cotSummary: {
+    cursor: 'pointer',
+    fontWeight: 700,
+    color: 'var(--foreground)',
+  },
+  cotList: {
+    margin: '8px 0 0 0',
+    paddingLeft: 18,
+    color: 'var(--text-muted)',
+    lineHeight: 1.5,
+    fontSize: 13,
+  },
+  devilInline: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    background: 'rgba(180, 83, 9, 0.08)',
+    border: '1px solid rgba(180, 83, 9, 0.3)',
+  },
+  devilTitle: {
+    fontSize: 12,
+    display: 'block',
+    marginBottom: 6,
+    color: '#9a3412',
+  },
+  devilText: {
+    margin: 0,
+    fontSize: 13,
+    color: 'var(--foreground)',
+    lineHeight: 1.5,
+  },
+  generalActions: {
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 12,
+    border: '1px dashed var(--border)',
+    background: 'rgba(0,0,0,0.02)',
+  },
+  actionOl: {
+    margin: '10px 0 0 0',
+    paddingLeft: 20,
+    fontSize: 13,
+    color: 'var(--foreground)',
+    lineHeight: 1.55,
+  },
+  masterCot: {
+    marginTop: 16,
+    padding: '12px 14px',
+    borderRadius: 10,
+    border: '1px solid var(--border)',
+    background: 'rgba(99, 91, 255, 0.04)',
+  },
+  devilOverall: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    border: '2px solid #c2410c',
+    background: 'rgba(194, 65, 12, 0.06)',
   },
 }

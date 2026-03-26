@@ -8,6 +8,8 @@ import math
 import random
 from typing import Any
 
+from app.services.risk.risk_narrative import build_deterministic_narrative
+
 
 def _percentile(sorted_vals: list[float], q: float) -> float:
     if not sorted_vals:
@@ -77,6 +79,7 @@ def run_liquidity_monte_carlo(
     exp_sigma = max(1e-6, exp_mu * exp_cv) if exp_cv > 0 else 1e-6
 
     inflows: list[float] = []
+    expenses_out: list[float] = []
     endings: list[float] = []
 
     for _ in range(n):
@@ -95,18 +98,33 @@ def run_liquidity_monte_carlo(
         inf = max(0.0, raw_i)
         exp = max(0.0, raw_e)
         inflows.append(inf)
+        expenses_out.append(exp)
         endings.append(bal + inf - exp)
 
     inflows_sorted = sorted(inflows)
     default_count = sum(1 for e in endings if e < 0)
     p_default = default_count / n
 
+    count_heavy_loss = sum(
+        1 for inf in inflows if inf_mu > 0 and inf <= 0.30 * inf_mu
+    )
+    count_material_loss = sum(
+        1 for inf in inflows if inf_mu > 0 and inf <= 0.50 * inf_mu
+    )
+    count_exp_spike = sum(
+        1 for expv in expenses_out if exp_mu > 0 and expv >= 1.20 * exp_mu
+    )
+
+    p_70_line = count_heavy_loss / n
+    p_50_line = count_material_loss / n
+    p_exp_spike = count_exp_spike / n
+
     hist = _histogram(endings, num_bins=22)
     peak = max((b["frequency"] for b in hist), default=1)
     for b in hist:
         b["relative_height"] = b["frequency"] / peak
 
-    return {
+    payload: dict[str, Any] = {
         "probability_of_default": round(p_default, 4),
         "best_case_cash_inflow": round(_percentile(inflows_sorted, 0.95), 2),
         "worst_case_cash_inflow": round(_percentile(inflows_sorted, 0.05), 2),
@@ -115,4 +133,22 @@ def run_liquidity_monte_carlo(
         "starting_balance": round(bal, 2),
         "n_simulations": n,
         "distribution": hist,
+        "inflow_variability": round(inf_cv, 4),
+        "expense_variability": round(exp_cv, 4),
+        "probability_receivables_heavy_loss": round(p_70_line, 4),
+        "probability_receivables_material_shortfall": round(p_50_line, 4),
+        "probability_expense_spike": round(p_exp_spike, 4),
     }
+    if inf_mu > 0:
+        payload["receivables_loss_plain_summary"] = (
+            f"In about {round(p_70_line * 100)}% of simulated paths, cash collections were at or below "
+            "30% of your receivables baseline—roughly analogous to a very large share of receivables "
+            "not converting in that single period."
+        )
+    else:
+        payload["receivables_loss_plain_summary"] = (
+            "No receivables baseline was available; inflow stress metrics are not meaningful for this run."
+        )
+
+    payload["narrative"] = build_deterministic_narrative(payload)
+    return payload
