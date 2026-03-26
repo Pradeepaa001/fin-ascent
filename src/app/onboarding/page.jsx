@@ -20,6 +20,8 @@ export default function OnboardingPage() {
   const [revenue, setRevenue] = useState('')
   const [industry, setIndustry] = useState('')
   const [liquidity, setLiquidity] = useState('')
+  const [avgInflow, setAvgInflow] = useState('')
+  const [avgOutflow, setAvgOutflow] = useState('')
   
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -34,6 +36,13 @@ export default function OnboardingPage() {
       } else {
         setUserId(user.id)
         setName(user.user_metadata?.full_name || '')
+        const m = user.user_metadata || {}
+        if (m.signup_avg_inflow != null && m.signup_avg_inflow !== '') {
+          setAvgInflow(String(m.signup_avg_inflow))
+        }
+        if (m.signup_avg_outflow != null && m.signup_avg_outflow !== '') {
+          setAvgOutflow(String(m.signup_avg_outflow))
+        }
       }
     })
   }, [router, supabase])
@@ -46,6 +55,9 @@ export default function OnboardingPage() {
     setError(null)
     
     try {
+      const inflow = avgInflow ? parseFloat(avgInflow) : null
+      const outflow = avgOutflow ? parseFloat(avgOutflow) : null
+
       const { error } = await supabase.from('user_profiles').insert({
         user_id: userId,
         name: name || 'User',
@@ -54,6 +66,8 @@ export default function OnboardingPage() {
         revenue_range: revenue,
         industry: industry,
         current_liquidity: liquidity ? parseFloat(liquidity) : null,
+        average_inflow: inflow,
+        average_outflow: outflow != null ? Math.max(outflow, 1) : null,
         onboarding_completed: true
       })
 
@@ -121,13 +135,45 @@ export default function OnboardingPage() {
               />
             </div>
             <div className={styles.inputGroup}>
-              <label className={styles.label}>Current Liquidity ($)</label>
+              <label className={styles.label}>Current balance / liquidity ($)</label>
               <input 
                 type="number" 
                 className="input-field" 
                 placeholder="e.g. 50000" 
                 value={liquidity}
                 onChange={(e) => setLiquidity(e.target.value)}
+                required
+              />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, display: 'block' }}>
+                Stored as <code style={{ fontSize: 11 }}>current_liquidity</code> on your profile.
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Average cash inflow ($ / month)</label>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                className="input-field"
+                placeholder="e.g. 25000"
+                value={avgInflow}
+                onChange={(e) => setAvgInflow(e.target.value)}
+                required
+              />
+            </div>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Average cash outflow ($ / month)</label>
+              <input
+                type="number"
+                min={1}
+                step={100}
+                className="input-field"
+                placeholder="e.g. 20000"
+                value={avgOutflow}
+                onChange={(e) => setAvgOutflow(e.target.value)}
                 required
               />
             </div>

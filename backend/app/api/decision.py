@@ -1,14 +1,8 @@
-import os
 from fastapi import APIRouter
-from supabase import create_client, Client
-from dotenv import load_dotenv
 
-load_dotenv()
+from app.services.storage.supabase_client import supabase
+
 router = APIRouter()
-
-supabase_url = os.environ.get("SUPABASE_URL")
-supabase_key = os.environ.get("SUPABASE_ANON_KEY")
-supabase: Client = create_client(supabase_url, supabase_key)
 
 @router.get("/{user_id}")
 async def get_decisions(user_id: str):

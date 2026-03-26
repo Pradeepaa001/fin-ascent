@@ -1,15 +1,20 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import SummaryRow from '@/components/dashboard/SummaryRow'
 import GanttTimeline from '@/components/dashboard/GanttTimeline'
 import PayablesTable from '@/components/dashboard/PayablesTable'
 import MonteCarloRisk from '@/components/dashboard/MonteCarloRisk'
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+import ZeroDayCard from '@/components/dashboard/ZeroDayCard'
+import {
+  applyTimelineWithRelationOverrides,
+  DEFAULT_RELATION,
+  loadRelationOverrides,
+  saveRelationOverrides,
+} from '@/lib/priorityEngine'
+import { fetchWithTimeout, getDashboardApiBase } from '@/lib/apiBase'
 
 export default function DashboardRoot() {
   const router = useRouter()
@@ -23,89 +28,158 @@ export default function DashboardRoot() {
   const [summary, setSummary] = useState({})
   const [timeline, setTimeline] = useState([])
   const [table, setTable] = useState([])
+  const [zeroDay, setZeroDay] = useState()
+  const [runwayBalance, setRunwayBalance] = useState(null)
+  const [runwayInflow, setRunwayInflow] = useState(null)
+  const [relationOverrides, setRelationOverrides] = useState({})
 
   useEffect(() => {
-    let mounted = true
+    setRelationOverrides(loadRelationOverrides())
+  }, [])
 
-    async function fetchData() {
-      try {
-        setLoading(true)
-        setError(null)
+  const loadDashboard = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser()
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
 
-        if (userError) throw userError
-        if (!user) {
-          router.push('/login')
-          return
-        }
-
-        const { data: p, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (profileError) throw profileError
-        if (!p || !p.onboarding_completed) {
-          router.push('/onboarding')
-          return
-        }
-
-        if (!mounted) return
-        setProfile(p)
-        setUserId(user.id)
-
-        const apiBase = `${API_BASE_URL}/api/dashboard`
-
-        const [creditRes, payablesRes, receivablesRes, balanceRes, ganttRes, top10Res] =
-          await Promise.all([
-            fetch(`${apiBase}/credit-score?user_id=${user.id}`),
-            fetch(`${apiBase}/payables/summary?user_id=${user.id}`),
-            fetch(`${apiBase}/receivables/summary?user_id=${user.id}`),
-            fetch(`${apiBase}/balance?user_id=${user.id}`),
-            fetch(`${apiBase}/payables/timeline?user_id=${user.id}`),
-            fetch(`${apiBase}/payables/top10?user_id=${user.id}`),
-          ])
-
-        const [credit, payables, receivables, balance, gantt, top10] =
-          await Promise.all([
-            creditRes.json(),
-            payablesRes.json(),
-            receivablesRes.json(),
-            balanceRes.json(),
-            ganttRes.json(),
-            top10Res.json(),
-          ])
-
-        if (!mounted) return
-
-        setSummary({
-          credit_score: credit?.credit_score ?? 0,
-          payables: payables?.total_amount ?? 0,
-          receivables: receivables?.total_amount ?? 0,
-          balance: balance?.balance ?? 0,
-        })
-
-        setTimeline(Array.isArray(gantt) ? gantt : [])
-        setTable(Array.isArray(top10) ? top10 : [])
-      } catch (e) {
-        if (!mounted) return
-        setError(e?.message || 'Failed to load dashboard.')
-      } finally {
-        if (!mounted) return
-        setLoading(false)
+      if (userError) throw userError
+      if (!user) {
+        router.push('/login')
+        return
       }
-    }
 
-    fetchData()
-    return () => {
-      mounted = false
+      const { data: p, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profileError) throw profileError
+      if (!p || !p.onboarding_completed) {
+        router.push('/onboarding')
+        return
+      }
+
+      setProfile(p)
+      setUserId(user.id)
+
+      const apiBase = getDashboardApiBase()
+
+      const [
+        creditRes,
+        payablesRes,
+        receivablesRes,
+        balanceRes,
+        ganttRes,
+        top10Res,
+        zeroRes,
+      ] = await Promise.all([
+        fetchWithTimeout(`${apiBase}/credit-score?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/payables/summary?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/receivables/summary?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/balance?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/payables/timeline?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/payables/top10?user_id=${user.id}`),
+        fetchWithTimeout(`${apiBase}/zero-day?user_id=${user.id}`),
+      ])
+
+      const [
+        credit,
+        payables,
+        receivables,
+        balance,
+        gantt,
+        top10,
+        zeroPayload,
+      ] = await Promise.all([
+        creditRes.json(),
+        payablesRes.json(),
+        receivablesRes.json(),
+        balanceRes.json(),
+        ganttRes.json(),
+        top10Res.json(),
+        zeroRes.json(),
+      ])
+
+      setSummary({
+        credit_score: credit?.credit_score ?? 0,
+        payables: payables?.total_amount ?? 0,
+        receivables: receivables?.total_amount ?? 0,
+        balance: balance?.balance ?? 0,
+      })
+
+      setTimeline(Array.isArray(gantt) ? gantt : [])
+      setTable(Array.isArray(top10) ? top10 : [])
+      setZeroDay(
+        zeroPayload && typeof zeroPayload.zero_day === 'number'
+          ? zeroPayload.zero_day
+          : null
+      )
+      setRunwayBalance(
+        zeroPayload?.current_balance != null
+          ? Number(zeroPayload.current_balance)
+          : zeroPayload?.balance != null
+            ? Number(zeroPayload.balance)
+            : null
+      )
+      setRunwayInflow(
+        zeroPayload?.avg_cash_inflow != null
+          ? Number(zeroPayload.avg_cash_inflow)
+          : zeroPayload?.average_inflow != null
+            ? Number(zeroPayload.average_inflow)
+            : null
+      )
+
+      const { data: refreshed } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+      if (refreshed) {
+        setProfile(refreshed)
+      }
+    } catch (e) {
+      if (e?.name === 'AbortError') {
+        setError(
+          'Dashboard API timed out (30s). Start FastAPI: cd backend && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000'
+        )
+      } else {
+        setError(
+          e?.message ||
+            'Failed to load dashboard. Start the API on port 8000, or unset NEXT_PUBLIC_API_BASE_URL so Next proxies /api/dashboard to the backend.'
+        )
+      }
+    } finally {
+      setLoading(false)
     }
   }, [router, supabase])
+
+  useEffect(() => {
+    loadDashboard()
+  }, [loadDashboard])
+
+  const handleRelationChange = useCallback((obligationId, value) => {
+    setRelationOverrides((prev) => {
+      const next = { ...prev }
+      if (Math.abs(Number(value) - DEFAULT_RELATION) < 1e-9) {
+        delete next[obligationId]
+      } else {
+        next[obligationId] = Number(value)
+      }
+      saveRelationOverrides(next)
+      return next
+    })
+  }, [])
+
+  const timelineWithRelations = useMemo(
+    () => applyTimelineWithRelationOverrides(timeline, relationOverrides),
+    [timeline, relationOverrides]
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -153,8 +227,25 @@ export default function DashboardRoot() {
       ) : (
         <>
           <SummaryRow data={summary} />
-          <GanttTimeline data={timeline} />
-          <PayablesTable data={table} />
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 20,
+            }}
+          >
+            <ZeroDayCard
+              runwayDays={zeroDay}
+              balance={runwayBalance}
+              averageInflow={runwayInflow}
+            />
+          </div>
+          <GanttTimeline data={timelineWithRelations} />
+          <PayablesTable
+            data={table}
+            relationOverrides={relationOverrides}
+            onRelationChange={handleRelationChange}
+          />
           <MonteCarloRisk userId={userId} />
         </>
       )}

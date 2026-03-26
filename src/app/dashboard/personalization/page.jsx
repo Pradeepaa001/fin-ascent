@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import styles from "./page.module.css";
 import { createClient } from "@supabase/supabase-js";
+import { backendUrl } from "@/lib/apiBase";
 
 // Ensure Supabase URL and Key are available
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -47,7 +48,7 @@ export default function PersonalizationPage() {
   const fetchDecisions = async (userId) => {
     setLoadingDecisions(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/decision/${userId}`);
+      const res = await fetch(backendUrl(`/api/decision/${userId}`));
       const data = await res.json();
       setBaseDecisions(data.base || []);
       setPersonalizedDecisions(data.personalized || []);
@@ -61,7 +62,7 @@ export default function PersonalizationPage() {
   const handleParseText = async (text) => {
     setIsProcessing(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/personalization/parse`, {
+      const res = await fetch(backendUrl("/api/personalization/parse"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text })
@@ -79,7 +80,7 @@ export default function PersonalizationPage() {
     setIsProcessing(true);
     const userId = user ? user.id : "demo_user";
     try {
-      await fetch(`http://127.0.0.1:8000/api/personalization/update`, {
+      await fetch(backendUrl("/api/personalization/update"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, ...weights })

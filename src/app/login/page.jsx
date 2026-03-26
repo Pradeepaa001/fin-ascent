@@ -12,6 +12,8 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [avgInflow, setAvgInflow] = useState('')
+  const [avgOutflow, setAvgOutflow] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   
@@ -36,7 +38,9 @@ export default function AuthPage() {
           password,
           options: {
             data: {
-              full_name: name
+              full_name: name,
+              signup_avg_inflow: avgInflow || null,
+              signup_avg_outflow: avgOutflow || null,
             }
           }
         })
@@ -157,6 +161,41 @@ export default function AuthPage() {
               />
             </div>
           )}
+
+          {isSignUp && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className={styles.inputGroup}>
+                <label className={styles.label} htmlFor="avgIn">
+                  Typical cash inflow (per month, $)
+                </label>
+                <input
+                  id="avgIn"
+                  type="number"
+                  min={0}
+                  step={100}
+                  className="input-field"
+                  placeholder="e.g. 25000"
+                  value={avgInflow}
+                  onChange={(e) => setAvgInflow(e.target.value)}
+                />
+              </div>
+              <div className={styles.inputGroup}>
+                <label className={styles.label} htmlFor="avgOut">
+                  Typical cash outflow (per month, $)
+                </label>
+                <input
+                  id="avgOut"
+                  type="number"
+                  min={0}
+                  step={100}
+                  className="input-field"
+                  placeholder="e.g. 20000"
+                  value={avgOutflow}
+                  onChange={(e) => setAvgOutflow(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
           
           <button type="submit" className="primary-button" disabled={loading} style={{marginTop: 8}}>
             {loading ? 'Processing...' : (isSignUp ? 'Sign up' : 'Sign in')}
@@ -171,6 +210,8 @@ export default function AuthPage() {
             onClick={() => {
               setIsSignUp(!isSignUp)
               setError(null)
+              setAvgInflow('')
+              setAvgOutflow('')
             }}
           >
             {isSignUp ? 'Sign in' : 'Sign up'}
